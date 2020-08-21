@@ -55,12 +55,15 @@ impl State {
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        unimplemented!()
+        self.size = new_size;
+        self.sc_desc.width = new_size.width;
+        self.sc_desc.height = new_size.height;
+        self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
     }
 
     // input() won't deal with GPU code, so it can be synchronous
     pub fn input(&mut self, event: &WindowEvent) -> bool {
-        unimplemented!()
+        false
     }
 
     pub fn update(&mut self) {
