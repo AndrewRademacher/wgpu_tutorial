@@ -2,6 +2,7 @@ use winit::window::Window;
 use winit::event::WindowEvent;
 use wgpu::{Instance, BackendBit, Operations};
 use wgpu::LoadOp::Clear;
+use winit::dpi::PhysicalPosition;
 
 pub struct State {
     instance: wgpu::Instance,
@@ -13,6 +14,7 @@ pub struct State {
     swap_chain: wgpu::SwapChain,
 
     size: winit::dpi::PhysicalSize<u32>,
+    cursor_position: Option<PhysicalPosition<f64>>
 }
 
 impl State {
@@ -52,6 +54,7 @@ impl State {
             sc_desc,
             swap_chain,
             size,
+            cursor_position: None
         }
     }
 
@@ -64,7 +67,15 @@ impl State {
 
     // input() won't deal with GPU code, so it can be synchronous
     pub fn input(&mut self, event: &WindowEvent) -> bool {
-        false
+        match event {
+            WindowEvent::CursorMoved { position, .. } => {
+                self.cursor_position = Some(*position);
+                true
+            },
+            _ => {
+                false
+            }
+        }
     }
 
     pub fn update(&mut self) {}
@@ -84,12 +95,22 @@ impl State {
                         attachment: &frame.output.view,
                         resolve_target: None,
                         ops: Operations {
-                            load: Clear(wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
-                                a: 1.0
-                            }),
+                            load: Clear(
+                                match self.cursor_position {
+                                    Some(pos) => wgpu::Color {
+                                        r: pos.x / self.size.width as f64,
+                                        g: pos.y / self.size.height as f64,
+                                        b: 0.3,
+                                        a: 1.0
+                                    },
+                                    None => wgpu::Color {
+                                        r: 0.1,
+                                        g: 0.2,
+                                        b: 0.3,
+                                        a: 1.0
+                                    }
+                                }
+                            ),
                             store: true,
                         },
                     }
