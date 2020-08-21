@@ -1,8 +1,9 @@
 use winit::window::Window;
 use winit::event::WindowEvent;
-use wgpu::{Instance, BackendBit, Operations};
+use wgpu::{Instance, BackendBit, Operations, Device, ShaderModuleSource, PrimitiveTopology};
 use wgpu::LoadOp::Clear;
 use winit::dpi::PhysicalPosition;
+use std::borrow::Cow;
 
 pub struct State {
     instance: wgpu::Instance,
@@ -13,9 +14,24 @@ pub struct State {
     sc_desc: wgpu::SwapChainDescriptor,
     swap_chain: wgpu::SwapChain,
 
+    render_pipeline: wgpu::RenderPipeline,
+
     size: winit::dpi::PhysicalSize<u32>,
-    cursor_position: Option<PhysicalPosition<f64>>
+    cursor_position: Option<PhysicalPosition<f64>>,
 }
+
+// fn load_shaders(device: &Device) {
+//     // let vs_src = include_str!("shader.vert");
+//     // let fs_src = include_str!("shader.frag");
+//     //
+//     // let mut compiler = shaderc::Compiler::new().unwrap();
+//     // let vs_spirv = compiler.compile_into_spirv(vs_src, shaderc::ShaderKind::Vertex, "shader.vert", "main", None).unwrap();
+//     // let fs_spirv = compiler.compile_into_spirv(fs_src, shaderc::ShaderKind::Fragment, "shader.frag", "main", None).unwrap();
+//     //
+//     // // let vs_data = wgpu::read_spirv(std::io::Cursor::new(vs_spirv.as_binary_u8())).unwrap();
+//     // // let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
+//     // let vs_module = device.create_shader_module(ShaderModuleSource);
+// }
 
 impl State {
     pub async fn new(window: &Window) -> Self {
@@ -45,6 +61,37 @@ impl State {
         };
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
+        let vs_module = device.create_shader_module(ShaderModuleSource::Wgsl(Cow::from(include_str!("shader.vert"))));
+        let fs_module = device.create_shader_module(ShaderModuleSource::Wgsl(Cow::from(include_str!("shader.frag"))));
+        let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: None,
+            layout: Some(&render_pipeline_layout),
+            vertex_stage: wgpu::ProgrammableStageDescriptor {
+                module: &vs_module,
+                entry_point: "main",
+            },
+            fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
+                module: &fs_module,
+                entry_point: "main",
+            }),
+            rasterization_state: None,
+            primitive_topology: PrimitiveTopology::PointList,
+            color_states: &[],
+            depth_stencil_state: None,
+            vertex_state: wgpu::VertexStateDescriptor {
+                index_format: Default::default(),
+                vertex_buffers: &[],
+            },
+            sample_count: 0,
+            sample_mask: 0,
+            alpha_to_coverage_enabled: false,
+        });
+
         Self {
             instance,
             surface,
@@ -53,8 +100,9 @@ impl State {
             queue,
             sc_desc,
             swap_chain,
+            render_pipeline,
             size,
-            cursor_position: None
+            cursor_position: None,
         }
     }
 
@@ -71,7 +119,7 @@ impl State {
             WindowEvent::CursorMoved { position, .. } => {
                 self.cursor_position = Some(*position);
                 true
-            },
+            }
             _ => {
                 false
             }
@@ -101,13 +149,13 @@ impl State {
                                         r: pos.x / self.size.width as f64,
                                         g: pos.y / self.size.height as f64,
                                         b: 0.3,
-                                        a: 1.0
+                                        a: 1.0,
                                     },
                                     None => wgpu::Color {
                                         r: 0.1,
                                         g: 0.2,
                                         b: 0.3,
-                                        a: 1.0
+                                        a: 1.0,
                                     }
                                 }
                             ),
