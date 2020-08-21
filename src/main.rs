@@ -32,6 +32,13 @@ fn main() {
                     }
                     _ => {}
                 }
+            },
+            Event::RedrawRequested(_) => {
+                state.update();
+                state.render();
+            }
+            Event::MainEventsCleared => {
+                window.request_redraw()
             }
             _ => {}
         }

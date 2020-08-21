@@ -1,6 +1,7 @@
 use winit::window::Window;
 use winit::event::WindowEvent;
-use wgpu::{Instance, BackendBit};
+use wgpu::{Instance, BackendBit, Operations};
+use wgpu::LoadOp::Clear;
 
 pub struct State {
     instance: wgpu::Instance,
@@ -66,11 +67,43 @@ impl State {
         false
     }
 
-    pub fn update(&mut self) {
-        unimplemented!()
-    }
+    pub fn update(&mut self) {}
 
     pub fn render(&mut self) {
-        unimplemented!()
+        let frame = self.swap_chain.get_current_frame()
+            .expect("Timeout getting texture");
+
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Render Encoder")
+        });
+
+        {
+            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                color_attachments: &[
+                    wgpu::RenderPassColorAttachmentDescriptor {
+                        attachment: &frame.output.view,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: Clear(wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0
+                            }),
+                            store: true,
+                        },
+                    }
+                ],
+                depth_stencil_attachment: None,
+            });
+        }
+
+        // TODO: How can we avoid this allocation it does not like using an array for some reason.
+        self.queue.submit(vec![
+            encoder.finish()
+        ]);
+        // self.queue.submit(&[
+        //     encoder.finish()
+        // ]);
     }
 }
