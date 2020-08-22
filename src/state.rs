@@ -1,7 +1,9 @@
+use crate::vertex::{Vertex, VERTICIES};
+use wgpu::util::DeviceExt;
 use wgpu::LoadOp::Clear;
 use wgpu::{
-    BackendBit, BlendDescriptor, ColorWrite, CullMode, Device, FrontFace, IndexFormat, Instance,
-    Operations, PrimitiveTopology, RenderPipeline, SwapChainDescriptor,
+    BackendBit, BlendDescriptor, BufferSlice, BufferUsage, ColorWrite, CullMode, Device, FrontFace,
+    IndexFormat, Instance, Operations, PrimitiveTopology, RenderPipeline, SwapChainDescriptor,
 };
 use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent;
@@ -17,6 +19,9 @@ pub struct State {
     swap_chain: wgpu::SwapChain,
 
     render_pipeline: wgpu::RenderPipeline,
+
+    vertex_buffer: wgpu::Buffer,
+    num_vertices: u32,
 
     size: winit::dpi::PhysicalSize<u32>,
     cursor_position: Option<PhysicalPosition<f64>>,
@@ -59,6 +64,12 @@ impl State {
 
         let render_pipeline = State::create_render_pipeline(&device, &sc_desc);
 
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("vertex buffer"),
+            contents: bytemuck::cast_slice(VERTICIES),
+            usage: BufferUsage::VERTEX,
+        });
+
         Self {
             instance,
             surface,
@@ -68,6 +79,8 @@ impl State {
             sc_desc,
             swap_chain,
             render_pipeline,
+            vertex_buffer,
+            num_vertices: VERTICIES.len() as u32,
             size,
             cursor_position: None,
         }
@@ -113,7 +126,7 @@ impl State {
             depth_stencil_state: None,
             vertex_state: wgpu::VertexStateDescriptor {
                 index_format: IndexFormat::Uint16,
-                vertex_buffers: &[],
+                vertex_buffers: &[Vertex::desc()],
             },
             sample_count: 1,
             sample_mask: !0,
@@ -180,7 +193,8 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.num_vertices as u64));
+            render_pass.draw(0..self.num_vertices, 0..1);
         }
 
         // TODO: How can we avoid this allocation it does not like using an array for some reason.
