@@ -1,5 +1,8 @@
 use wgpu::LoadOp::Clear;
-use wgpu::{BackendBit, Instance, Operations, PrimitiveTopology};
+use wgpu::{
+    BackendBit, BlendDescriptor, ColorWrite, CullMode, FrontFace, IndexFormat, Instance,
+    Operations, PrimitiveTopology,
+};
 use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent;
 use winit::window::Window;
@@ -75,12 +78,24 @@ impl State {
                 module: &fs_module,
                 entry_point: "main",
             }),
-            rasterization_state: None,
-            primitive_topology: PrimitiveTopology::PointList,
-            color_states: &[],
+            rasterization_state: Some(wgpu::RasterizationStateDescriptor {
+                front_face: FrontFace::Ccw,
+                cull_mode: CullMode::Back,
+                clamp_depth: false,
+                depth_bias: 0,
+                depth_bias_slope_scale: 0.0,
+                depth_bias_clamp: 0.0,
+            }),
+            primitive_topology: PrimitiveTopology::TriangleList,
+            color_states: &[wgpu::ColorStateDescriptor {
+                format: sc_desc.format,
+                alpha_blend: BlendDescriptor::REPLACE,
+                color_blend: BlendDescriptor::REPLACE,
+                write_mask: ColorWrite::ALL,
+            }],
             depth_stencil_state: None,
             vertex_state: wgpu::VertexStateDescriptor {
-                index_format: Default::default(),
+                index_format: IndexFormat::Uint16,
                 vertex_buffers: &[],
             },
             sample_count: 1,
@@ -135,7 +150,7 @@ impl State {
             });
 
         {
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
                     attachment: &frame.output.view,
                     resolve_target: None,
@@ -159,6 +174,9 @@ impl State {
                 }],
                 depth_stencil_attachment: None,
             });
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.draw(0..3, 0..1);
         }
 
         // TODO: How can we avoid this allocation it does not like using an array for some reason.
