@@ -1,4 +1,4 @@
-use crate::vertex::{Vertex, VERTICIES};
+use crate::vertex::{Vertex, TRIANGLE};
 use wgpu::util::DeviceExt;
 use wgpu::LoadOp::Clear;
 use wgpu::{
@@ -66,7 +66,7 @@ impl State {
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("vertex buffer"),
-            contents: bytemuck::cast_slice(VERTICIES),
+            contents: bytemuck::cast_slice(TRIANGLE),
             usage: BufferUsage::VERTEX,
         });
 
@@ -80,7 +80,7 @@ impl State {
             swap_chain,
             render_pipeline,
             vertex_buffer,
-            num_vertices: VERTICIES.len() as u32,
+            num_vertices: TRIANGLE.len() as u32,
             size,
             cursor_position: None,
         }
