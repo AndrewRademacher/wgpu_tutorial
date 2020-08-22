@@ -1,7 +1,7 @@
 use wgpu::LoadOp::Clear;
 use wgpu::{
-    BackendBit, BlendDescriptor, ColorWrite, CullMode, FrontFace, IndexFormat, Instance,
-    Operations, PrimitiveTopology,
+    BackendBit, BlendDescriptor, ColorWrite, CullMode, Device, FrontFace, IndexFormat, Instance,
+    Operations, PrimitiveTopology, RenderPipeline, SwapChainDescriptor,
 };
 use winit::dpi::PhysicalPosition;
 use winit::event::WindowEvent;
@@ -57,6 +57,23 @@ impl State {
         };
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
+        let render_pipeline = State::create_render_pipeline(&device, &sc_desc);
+
+        Self {
+            instance,
+            surface,
+            adapter,
+            device,
+            queue,
+            sc_desc,
+            swap_chain,
+            render_pipeline,
+            size,
+            cursor_position: None,
+        }
+    }
+
+    fn create_render_pipeline(device: &Device, sc_desc: &SwapChainDescriptor) -> RenderPipeline {
         let vs_module =
             device.create_shader_module(wgpu::include_spirv!("shaders/shader.vert.spv"));
         let fs_module =
@@ -67,7 +84,7 @@ impl State {
                 bind_group_layouts: &[],
                 push_constant_ranges: &[],
             });
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&render_pipeline_layout),
             vertex_stage: wgpu::ProgrammableStageDescriptor {
@@ -101,20 +118,7 @@ impl State {
             sample_count: 1,
             sample_mask: !0,
             alpha_to_coverage_enabled: false,
-        });
-
-        Self {
-            instance,
-            surface,
-            adapter,
-            device,
-            queue,
-            sc_desc,
-            swap_chain,
-            render_pipeline,
-            size,
-            cursor_position: None,
-        }
+        })
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
