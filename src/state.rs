@@ -83,8 +83,8 @@ impl State {
                 index_format: Default::default(),
                 vertex_buffers: &[],
             },
-            sample_count: 0,
-            sample_mask: 0,
+            sample_count: 1,
+            sample_mask: !0,
             alpha_to_coverage_enabled: false,
         });
 
