@@ -9,7 +9,6 @@ fn main() {
     let shaders = scan_shaders("src/shaders/**/*");
 
     shaders.par_iter().for_each(|shader| {
-        println!("cargo:rerun-if-changed={}", shader.input.to_str().unwrap());
         let source = read_to_string(&shader.input).unwrap();
         let mut compiler = Compiler::new().unwrap();
         let spirv = compiler
@@ -58,12 +57,15 @@ fn scan_shaders(pattern: &str) -> Vec<Shader> {
         .filter_map(|entry| entry.ok())
         .filter(|entry| match entry.extension() {
             Some(ex) => match ex.to_str() {
-                Some(".spv") => false,
+                Some("spv") => false,
                 Some(_) => true,
                 None => true,
             },
             None => false,
         })
-        .map(|entry| Shader::new(entry))
+        .map(|entry| {
+            println!("cargo:rerun-if-changed={}", entry.to_str().unwrap());
+            Shader::new(entry)
+        })
         .collect()
 }
