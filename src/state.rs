@@ -1,9 +1,8 @@
-use winit::window::Window;
-use winit::event::WindowEvent;
-use wgpu::{Instance, BackendBit, Operations, Device, ShaderModuleSource, PrimitiveTopology};
 use wgpu::LoadOp::Clear;
+use wgpu::{BackendBit, Instance, Operations, PrimitiveTopology};
 use winit::dpi::PhysicalPosition;
-use std::borrow::Cow;
+use winit::event::WindowEvent;
+use winit::window::Window;
 
 pub struct State {
     instance: wgpu::Instance,
@@ -20,37 +19,31 @@ pub struct State {
     cursor_position: Option<PhysicalPosition<f64>>,
 }
 
-// fn load_shaders(device: &Device) {
-//     // let vs_src = include_str!("shader.vert");
-//     // let fs_src = include_str!("shader.frag");
-//     //
-//     // let mut compiler = shaderc::Compiler::new().unwrap();
-//     // let vs_spirv = compiler.compile_into_spirv(vs_src, shaderc::ShaderKind::Vertex, "shader.vert", "main", None).unwrap();
-//     // let fs_spirv = compiler.compile_into_spirv(fs_src, shaderc::ShaderKind::Fragment, "shader.frag", "main", None).unwrap();
-//     //
-//     // // let vs_data = wgpu::read_spirv(std::io::Cursor::new(vs_spirv.as_binary_u8())).unwrap();
-//     // // let fs_data = wgpu::read_spirv(std::io::Cursor::new(fs_spirv.as_binary_u8())).unwrap();
-//     // let vs_module = device.create_shader_module(ShaderModuleSource);
-// }
-
 impl State {
     pub async fn new(window: &Window) -> Self {
         let size = window.inner_size();
 
         let instance = Instance::new(BackendBit::PRIMARY);
         let surface = unsafe { instance.create_surface(window) };
-        let adapter = instance.request_adapter(
-            &wgpu::RequestAdapterOptions {
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
-            }
-        ).await.unwrap();
+            })
+            .await
+            .unwrap();
 
-        let (device, queue) = adapter.request_device(&wgpu::DeviceDescriptor {
-            features: Default::default(),
-            limits: Default::default(),
-            shader_validation: false,
-        }, None).await.unwrap();
+        let (device, queue) = adapter
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    features: Default::default(),
+                    limits: Default::default(),
+                    shader_validation: false,
+                },
+                None,
+            )
+            .await
+            .unwrap();
 
         let sc_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
@@ -61,13 +54,16 @@ impl State {
         };
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
-        let vs_module = device.create_shader_module(ShaderModuleSource::Wgsl(Cow::from(include_str!("shader.vert"))));
-        let fs_module = device.create_shader_module(ShaderModuleSource::Wgsl(Cow::from(include_str!("shader.frag"))));
-        let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: None,
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
-        });
+        let vs_module =
+            device.create_shader_module(wgpu::include_spirv!("shaders/shader.vert.spv"));
+        let fs_module =
+            device.create_shader_module(wgpu::include_spirv!("shaders/shader.frag.spv"));
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[],
+                push_constant_ranges: &[],
+            });
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&render_pipeline_layout),
@@ -120,57 +116,53 @@ impl State {
                 self.cursor_position = Some(*position);
                 true
             }
-            _ => {
-                false
-            }
+            _ => false,
         }
     }
 
     pub fn update(&mut self) {}
 
     pub fn render(&mut self) {
-        let frame = self.swap_chain.get_current_frame()
+        let frame = self
+            .swap_chain
+            .get_current_frame()
             .expect("Timeout getting texture");
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder")
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
         {
             let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                color_attachments: &[
-                    wgpu::RenderPassColorAttachmentDescriptor {
-                        attachment: &frame.output.view,
-                        resolve_target: None,
-                        ops: Operations {
-                            load: Clear(
-                                match self.cursor_position {
-                                    Some(pos) => wgpu::Color {
-                                        r: pos.x / self.size.width as f64,
-                                        g: pos.y / self.size.height as f64,
-                                        b: 0.3,
-                                        a: 1.0,
-                                    },
-                                    None => wgpu::Color {
-                                        r: 0.1,
-                                        g: 0.2,
-                                        b: 0.3,
-                                        a: 1.0,
-                                    }
-                                }
-                            ),
-                            store: true,
-                        },
-                    }
-                ],
+                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &frame.output.view,
+                    resolve_target: None,
+                    ops: Operations {
+                        load: Clear(match self.cursor_position {
+                            Some(pos) => wgpu::Color {
+                                r: pos.x / self.size.width as f64,
+                                g: pos.y / self.size.height as f64,
+                                b: 0.3,
+                                a: 1.0,
+                            },
+                            None => wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            },
+                        }),
+                        store: true,
+                    },
+                }],
                 depth_stencil_attachment: None,
             });
         }
 
         // TODO: How can we avoid this allocation it does not like using an array for some reason.
-        self.queue.submit(vec![
-            encoder.finish()
-        ]);
+        self.queue.submit(vec![encoder.finish()]);
         // self.queue.submit(&[
         //     encoder.finish()
         // ]);
